@@ -70,14 +70,43 @@ def analyze_image(file_path):
     Analyzes the food image using the Groq Cloud model "llama-3.2-90b-vision-preview"
     and returns the generated message as a dictionary.
     """
-    prompt = (
-        "Analyze the given food image and return a structured JSON with:\n"
-        "- food_detected: List of food items.\n"
-        "- calories: Estimated calories.\n"
-        "- nutritional_info: { carbs, proteins, fats } in grams.\n"
-        "- health_warnings: Warnings related to health.\n"
-        "- alternatives: Healthier alternatives."
-    )
+    prompt = r"""Analyze the given food image and return a structured JSON with:
+- food_detected: List of food items.
+- calories: Estimated calories.
+- nutritional_info: { carbohydrates, protein, fat } in grams.
+- health_warnings: Warnings related to health.
+- alternatives: Healthier alternatives.
+Give all these separately in JSON format.
+SAMPLE OUTPUT:
+{
+  "food_detected": [
+    "Salad with tomatoes",
+    "Tea or coffee",
+    "Burger",
+    "Avocado",
+    "Donuts",
+    "Croissant",
+    "Fruit salad",
+    "Chocolate milk"
+  ],
+  "calories": "1460-2330",
+  "nutritional_info": {
+    "carbohydrates": "123-193g",
+    "protein": "39-73g",
+    "fat": "86-135g"
+  },
+  "health_warnings": [
+    "High sodium content in processed foods like the burger",
+    "High sugar content in donuts and chocolate milk",
+    "High saturated fat content in croissant and chocolate milk"
+  ],
+  "alternatives": {
+    "burger": "Grilled chicken breast",
+    "donuts": "Fresh fruit",
+    "croissant": "Whole grain croissant",
+    "chocolate_milk": "Low-fat milk"
+  }
+}"""
     try:
         with open(file_path, "rb") as f:
             image_bytes = f.read()
@@ -150,7 +179,7 @@ async def recipe(request: RecipeRequest):
             "- recipe_name\n"
             "- ingredients (list)\n"
             "- calories (per serving)\n"
-            "- diet_friendly (Low Sodium, High Fiber, etc.)\n"
+            "- diet_friendly (e.g., Low Sodium, High Fiber, etc.)\n"
             "- instructions\n"
             "- health_benefits"
         )
@@ -250,12 +279,12 @@ async def chatbot(request: ChatbotRequest):
         prompt = (
             "You are a chatbot for a nutrition-based application.\n"
             "Answer only nutrition-related questions. If a question is out of scope, ask the user to stay on topic.\n"
-            "Consider user's health data for personalized responses."
+            "Consider the user's health data for personalized responses."
         )
 
         response = client.models.generate_content(
             model="gemini-2.0-flash-exp",
-            contents=[prompt, request.user_query, request.user_info]
+            contents=[prompt, request.user_query, request.user_info or ""]
         )
         return JSONResponse(content={"response": response.text})
     except Exception as e:
@@ -263,8 +292,7 @@ async def chatbot(request: ChatbotRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-import uvicorn
-
-if __name__ != "__main__":
+if __name__ == "__main__":
+    import uvicorn
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
