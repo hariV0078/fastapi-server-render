@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from google import genai
 from groq import Groq
 import fitz
@@ -124,7 +125,7 @@ async def nutrition(file: UploadFile = File(...)):
         logger.info(f"Processing file for nutrition: {file_path}")
 
         response_data = analyze_image(file_path)
-        return response_data
+        return JSONResponse(content=response_data)
     except Exception as e:
         logger.error(f"Error processing nutrition file: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -158,10 +159,12 @@ async def recipe(request: RecipeRequest):
             model="gemini-2.0-flash-exp",
             contents=[prompt, json.dumps(request.user_data)]
         )
-        return clean_json(response.text)
+        parsed_output = clean_json(response.text)
+        return JSONResponse(content=parsed_output)
     except Exception as e:
         logger.error(f"Error generating recipe: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 def extract_health_info(text: str):
     """Extract structured health information from a given text report."""
@@ -211,6 +214,7 @@ def extract_health_info(text: str):
     except Exception as e:
         raise ValueError(f"Error extracting health information: {e}")
 
+
 @app.post("/extract_health")
 async def extract_health(file: UploadFile = File(...)):
     """API endpoint to extract health information from a document."""
@@ -223,13 +227,14 @@ async def extract_health(file: UploadFile = File(...)):
         extracted_text = ocr_loader.extract_text()
         structured_data = extract_health_info(extracted_text)
         
-        return {"extracted_health_info": structured_data}
+        return JSONResponse(content={"extracted_health_info": structured_data})
     except Exception as e:
         logger.error(f"Error extracting health information: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if os.path.exists(file_path):
             os.remove(file_path)
+
 
 class ChatbotRequest(BaseModel):
     user_query: str
@@ -252,13 +257,12 @@ async def chatbot(request: ChatbotRequest):
             model="gemini-2.0-flash-exp",
             contents=[prompt, request.user_query, request.user_info]
         )
-        return {"response": response.text}
+        return JSONResponse(content={"response": response.text})
     except Exception as e:
         logger.error(f"Error in chatbot response: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-import os
 import uvicorn
 
 if __name__ != "__main__":
