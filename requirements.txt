@@ -4,6 +4,7 @@ uvicorn==0.29.0
 gunicorn
 # CORS support
 starlette==0.36.3
+groq==0.5.0  # (or latest version)
 
 # Google AI & Authentication
 google-auth==2.38.0
