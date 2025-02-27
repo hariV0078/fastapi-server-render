@@ -29,8 +29,8 @@ app.add_middleware(
 )
 
 # Load API keys (Replace with ENV variables for security)
-GOOGLE_API_KEY = "AIzaSyB9_uEfeyLvJ1O-PrT8Qlj8PlOG-p_MvsU")
-GROQ_API_KEY = "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")
+GOOGLE_API_KEY = "AIzaSyB9_uEfeyLvJ1O-PrT8Qlj8PlOG-p_MvsU"
+GROQ_API_KEY = "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"
 
 # Initialize API Clients
 client = genai.Client(api_key=GOOGLE_API_KEY)
