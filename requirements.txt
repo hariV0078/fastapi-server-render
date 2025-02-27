@@ -5,6 +5,7 @@ gunicorn
 # CORS support
 starlette==0.36.3
 groq
+python-multipart==0.0.9
 
 # Google AI & Authentication
 google-auth==2.38.0
