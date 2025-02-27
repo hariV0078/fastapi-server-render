@@ -163,6 +163,73 @@ async def recipe(request: RecipeRequest):
         logger.error(f"Error generating recipe: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+def extract_health_info(text: str):
+    """Extract structured health information from a given text report."""
+    try:
+        health_data = {}
+        
+        # Extract Patient Information
+        health_data["patient_info"] = {
+            "name": re.search(r"Name:\s*(.*)", text).group(1),
+            "age": int(re.search(r"Age:\s*(\d+)", text).group(1)),
+            "gender": re.search(r"Gender:\s*(.*)", text).group(1),
+            "report_date": re.search(r"Report Date:\s*(.*)", text).group(1),
+            "patient_id": re.search(r"Patient ID:\s*(.*)", text).group(1),
+            "doctor": re.search(r"Doctor:\s*(.*)", text).group(1),
+        }
+        
+        # Extract Vital Signs & Lab Results
+        health_data["vital_signs"] = {
+            "blood_pressure": re.search(r"Blood Pressure:\s*(.*)\s*\(.*\)", text).group(1),
+            "fasting_blood_sugar": int(re.search(r"Fasting Blood Sugar:\s*(\d+)", text).group(1)),
+            "post_meal_blood_sugar": int(re.search(r"Post-Meal Blood Sugar:\s*(\d+)", text).group(1)),
+            "hba1c_level": float(re.search(r"HbA1c Level:\s*(\d+\.\d+)", text).group(1)),
+            "cholesterol": int(re.search(r"Cholesterol:\s*(\d+)", text).group(1)),
+            "bmi": float(re.search(r"BMI:\s*(\d+\.?\d*)", text).group(1)),
+        }
+        
+        # Extract Doctor's Observations
+        observations_match = re.search(r"Doctor's Observations & Diagnosis\n(.*?)(?:\n\n|Medication & Treatment Plan)", text, re.DOTALL)
+        health_data["doctor_observations"] = observations_match.group(1).strip() if observations_match else ""
+        
+        # Extract Medication & Treatment Plan
+        medications_match = re.findall(r"- (.*?)- Once daily", text)
+        health_data["medication_plan"] = medications_match if medications_match else []
+        
+        # Extract Dietary & Lifestyle Recommendations
+        recommendations_match = re.search(r"Dietary & Lifestyle Recommendations\n(.*?)(?:\n\n|Follow-up & Next Appointment)", text, re.DOTALL)
+        health_data["dietary_recommendations"] = recommendations_match.group(1).strip().split('\n') if recommendations_match else []
+        
+        # Extract Follow-up & Next Appointment
+        health_data["follow_up"] = {
+            "next_appointment": re.search(r"Next Appointment:\s*(.*)", text).group(1),
+            "recommended_tests": re.findall(r"Recommended Tests:\s*(.*)\n", text),
+            "doctor_contact": re.search(r"Doctor's Contact:\s*(.*)", text).group(1),
+        }
+        
+        return health_data
+    except Exception as e:
+        raise ValueError(f"Error extracting health information: {e}")
+
+@app.post("/extract_health")
+async def extract_health(file: UploadFile = File(...)):
+    """API endpoint to extract health information from a document."""
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(await file.read())
+            file_path = temp_file.name
+        
+        ocr_loader = OCRTextLoader(file_path)
+        extracted_text = ocr_loader.extract_text()
+        structured_data = extract_health_info(extracted_text)
+        
+        return {"extracted_health_info": structured_data}
+    except Exception as e:
+        logger.error(f"Error extracting health information: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 class ChatbotRequest(BaseModel):
     user_query: str
