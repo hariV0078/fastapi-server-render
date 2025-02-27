@@ -29,7 +29,7 @@ app.add_middleware(
 )
 
 # Load API keys (Replace with ENV variables for security)
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyB9_uEfeyLvJ1O-PrT8Qlj8PlOG-p_MvsU")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "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")
 
 # Initialize API Clients
